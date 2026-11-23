@@ -1,0 +1,826 @@
+{
+  "cases": [
+    {
+      "name": "mapped model is sent upstream as the machine model",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "model": "my-kling",
+          "upstreamModel": "kling-video-v3",
+          "baseUrl": "https://tokenhub.tencentmaas.com",
+          "apiKey": "th-test-key",
+          "upstream": { "kind": "vendor" },
+          "requestBody": {
+            "model": "my-kling",
+            "endpoint": "text-to-video",
+            "body": {
+              "prompt": "A girl sat on the train, looking out the window",
+              "settings": { "resolution": "1080p", "duration": 5, "audio": "native" },
+              "options": { "watermark_info": { "enabled": false } }
+            }
+          }
+        }
+      ],
+      "expected": {
+        "url": "https://tokenhub.tencentmaas.com/v1/wand/kling/text-to-video",
+        "method": "POST",
+        "headers": { "Accept": "application/json", "Authorization": "Bearer th-test-key", "Content-Type": "application/json" },
+        "body": {
+          "model": "kling-video-v3",
+          "prompt": "A girl sat on the train, looking out the window",
+          "settings": { "resolution": "1080p", "duration": 5, "audio": "native" },
+          "options": { "watermark_info": { "enabled": false } }
+        },
+        "action": "text_to_video"
+      }
+    },
+    {
+      "name": "a New API upstream is addressed under the plugin key",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "model": "kling-video-v2.6",
+          "baseUrl": "https://gateway.example.com",
+          "apiKey": "sk-gateway",
+          "upstream": { "kind": "new_api" },
+          "requestBody": {
+            "model": "kling-video-v2.6",
+            "endpoint": "image-to-video",
+            "body": {
+              "contents": [
+                { "type": "prompt", "text": "Turn the head slowly" },
+                { "type": "first_frame", "url": "https://example.com/start.jpg" },
+                { "type": "last_frame", "url": "https://example.com/end.jpg" }
+              ],
+              "settings": { "resolution": "720p", "duration": 10 }
+            }
+          }
+        }
+      ],
+      "expected": {
+        "url": "https://gateway.example.com/t0ng7u_tokenhub-kling/v1/wand/kling/image-to-video",
+        "method": "POST",
+        "headers": { "Accept": "application/json", "Authorization": "Bearer sk-gateway", "Content-Type": "application/json" },
+        "body": {
+          "model": "kling-video-v2.6",
+          "contents": [
+            { "type": "prompt", "text": "Turn the head slowly" },
+            { "type": "first_frame", "url": "https://example.com/start.jpg" },
+            { "type": "last_frame", "url": "https://example.com/end.jpg" }
+          ],
+          "settings": { "resolution": "720p", "duration": 10 }
+        },
+        "action": "first_tail_to_video"
+      }
+    },
+    {
+      "name": "v4 omni video takes a middle frame and original audio",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "model": "kling-video-v4",
+          "baseUrl": "https://tokenhub.tencentmaas.com",
+          "apiKey": "th-test-key",
+          "requestBody": {
+            "model": "kling-video-v4",
+            "endpoint": "omni-video",
+            "body": {
+              "contents": [
+                { "type": "prompt", "text": "Keep @image_1 walking through the scene" },
+                { "type": "first_frame", "url": "https://example.com/start.jpg" },
+                { "type": "middle_frame", "url": "https://example.com/middle.jpg" },
+                { "type": "voice", "voice_id": "829826751244537879", "id": "1" }
+              ],
+              "settings": { "aspect_ratio": "adaptive", "audio": "original" }
+            }
+          }
+        }
+      ],
+      "expected": {
+        "url": "https://tokenhub.tencentmaas.com/v1/wand/kling/omni-video",
+        "method": "POST",
+        "headers": { "Accept": "application/json", "Authorization": "Bearer th-test-key", "Content-Type": "application/json" },
+        "body": {
+          "model": "kling-video-v4",
+          "contents": [
+            { "type": "prompt", "text": "Keep @image_1 walking through the scene" },
+            { "type": "first_frame", "url": "https://example.com/start.jpg" },
+            { "type": "middle_frame", "url": "https://example.com/middle.jpg" },
+            { "type": "voice", "voice_id": "829826751244537879", "id": "1" }
+          ],
+          "settings": { "aspect_ratio": "adaptive", "audio": "original" }
+        },
+        "action": "reference_to_video"
+      }
+    },
+    {
+      "name": "motion control requires the character orientation",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "model": "kling-video-motion-control-v3.0",
+          "baseUrl": "https://tokenhub.tencentmaas.com",
+          "apiKey": "th-test-key",
+          "requestBody": {
+            "endpoint": "motion-control",
+            "body": {
+              "contents": [
+                { "type": "image", "url": "https://example.com/character.png" },
+                { "type": "video", "url": "https://example.com/motion.mp4" }
+              ],
+              "settings": { "resolution": "1080p" }
+            }
+          }
+        }
+      ],
+      "expectedError": "settings.character_orientation is required: image, video"
+    },
+    {
+      "name": "reject an unknown model",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "model": "kling-video-v9",
+          "baseUrl": "https://tokenhub.tencentmaas.com",
+          "apiKey": "th-test-key",
+          "requestBody": { "endpoint": "text-to-video", "body": { "prompt": "A quiet garden" } }
+        }
+      ],
+      "expectedError": "model must be one of: kling-video-v4-flash, kling-video-v4, kling-video-v3, kling-video-v3-turbo, kling-video-v3-omni, kling-video-o1, kling-video-v2.6, kling-video-v2.5-turbo, kling-video-motion-control-v3.0, kling-video-motion-control-v2.6"
+    },
+    {
+      "name": "reject an endpoint the model does not serve",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "model": "kling-video-o1",
+          "baseUrl": "https://tokenhub.tencentmaas.com",
+          "apiKey": "th-test-key",
+          "requestBody": { "endpoint": "text-to-video", "body": { "prompt": "A quiet garden" } }
+        }
+      ],
+      "expectedError": "kling-video-o1 does not support text-to-video"
+    },
+    {
+      "name": "reject an empty prompt",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "model": "kling-video-v3",
+          "baseUrl": "https://tokenhub.tencentmaas.com",
+          "apiKey": "th-test-key",
+          "requestBody": { "endpoint": "text-to-video", "body": { "prompt": "  " } }
+        }
+      ],
+      "expectedError": "prompt must be a non-empty string"
+    },
+    {
+      "name": "reject a duration the model cannot produce",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "model": "kling-video-v4-flash",
+          "baseUrl": "https://tokenhub.tencentmaas.com",
+          "apiKey": "th-test-key",
+          "requestBody": { "endpoint": "text-to-video", "body": { "prompt": "A quiet garden", "settings": { "duration": 25 } } }
+        }
+      ],
+      "expectedError": "settings.duration must be an integer of 3 to 20 seconds"
+    },
+    {
+      "name": "reject a resolution the model does not offer",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "model": "kling-video-v4-flash",
+          "baseUrl": "https://tokenhub.tencentmaas.com",
+          "apiKey": "th-test-key",
+          "requestBody": { "endpoint": "text-to-video", "body": { "prompt": "A quiet garden", "settings": { "resolution": "1080p" } } }
+        }
+      ],
+      "expectedError": "settings.resolution must be one of: 720p"
+    },
+    {
+      "name": "reject an audio mode the endpoint does not take",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "model": "kling-video-v3",
+          "baseUrl": "https://tokenhub.tencentmaas.com",
+          "apiKey": "th-test-key",
+          "requestBody": { "endpoint": "text-to-video", "body": { "prompt": "A quiet garden", "settings": { "audio": "original" } } }
+        }
+      ],
+      "expectedError": "settings.audio must be one of: native, off"
+    },
+    {
+      "name": "reject an image-to-video request without a first frame",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "model": "kling-video-v3",
+          "baseUrl": "https://tokenhub.tencentmaas.com",
+          "apiKey": "th-test-key",
+          "requestBody": { "endpoint": "image-to-video", "body": { "contents": [{ "type": "prompt", "text": "Animate" }] } }
+        }
+      ],
+      "expectedError": "contents must include a first_frame"
+    },
+    {
+      "name": "reject a caller-chosen external task id",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "model": "kling-video-v3",
+          "baseUrl": "https://tokenhub.tencentmaas.com",
+          "apiKey": "th-test-key",
+          "requestBody": { "endpoint": "text-to-video", "body": { "prompt": "A quiet garden", "options": { "external_task_id": "mine-1" } } }
+        }
+      ],
+      "expectedError": "options.external_task_id is not supported; query the task by its id instead"
+    },
+    {
+      "name": "reject an empty channel key",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "model": "kling-video-v3",
+          "baseUrl": "https://tokenhub.tencentmaas.com",
+          "apiKey": " ",
+          "requestBody": { "endpoint": "text-to-video", "body": { "prompt": "A quiet garden" } }
+        }
+      ],
+      "expectedError": "api_key is empty"
+    },
+    {
+      "name": "usage for legacy billing ratios is not reported",
+      "hook": "extractUsage",
+      "args": [{ "usagePurpose": "billing_ratios", "model": "kling-video-v3", "requestBody": { "endpoint": "text-to-video", "body": { "prompt": "A quiet garden" } } }],
+      "expected": null
+    },
+    {
+      "name": "usage: v4 without a duration reserves its 10-second default at 1080p",
+      "hook": "extractUsage",
+      "args": [{ "model": "kling-video-v4", "requestBody": { "endpoint": "text-to-video", "body": { "prompt": "A quiet garden" } } }],
+      "expected": { "tokens": 1500000 }
+    },
+    {
+      "name": "usage: v4-flash without a duration reserves 10 seconds at 720p",
+      "hook": "extractUsage",
+      "args": [{ "model": "kling-video-v4-flash", "requestBody": { "endpoint": "text-to-video", "body": { "prompt": "A quiet garden" } } }],
+      "expected": { "tokens": 1000000 }
+    },
+    {
+      "name": "usage: v3 with native audio uses the audio rate",
+      "hook": "extractUsage",
+      "args": [
+        {
+          "model": "my-kling",
+          "upstreamModel": "kling-video-v3",
+          "requestBody": { "endpoint": "text-to-video", "body": { "prompt": "A quiet garden", "settings": { "resolution": "1080p", "duration": 5, "audio": "native" } } }
+        }
+      ],
+      "expected": { "tokens": 600000 }
+    },
+    {
+      "name": "usage: v2.6 with a voice uses the voice rate",
+      "hook": "extractUsage",
+      "args": [
+        {
+          "model": "kling-video-v2.6",
+          "requestBody": {
+            "endpoint": "image-to-video",
+            "body": {
+              "contents": [
+                { "type": "prompt", "text": "@1 says hello" },
+                { "type": "first_frame", "url": "https://example.com/start.jpg" },
+                { "type": "voice", "voice_id": "829826751244537879", "id": "1" }
+              ],
+              "settings": { "resolution": "1080p", "duration": 10, "audio": "native" }
+            }
+          }
+        }
+      ],
+      "expected": { "tokens": 1200000 }
+    },
+    {
+      "name": "usage: v4 with a reference video reserves the longest input",
+      "hook": "extractUsage",
+      "args": [
+        {
+          "model": "kling-video-v4",
+          "requestBody": {
+            "endpoint": "omni-video",
+            "body": {
+              "contents": [
+                { "type": "prompt", "text": "Follow the rhythm of @video_1" },
+                { "type": "feature_video", "url": "https://example.com/motion.mp4" }
+              ],
+              "settings": { "resolution": "1080p", "duration": 10 }
+            }
+          }
+        }
+      ],
+      "expected": { "tokens": 3600000 }
+    },
+    {
+      "name": "usage: a v4 edit without a duration reserves a 30-second input",
+      "hook": "extractUsage",
+      "args": [
+        {
+          "model": "kling-video-v4",
+          "requestBody": {
+            "endpoint": "omni-video",
+            "body": {
+              "contents": [
+                { "type": "prompt", "text": "Turn the feathers blue" },
+                { "type": "base_video", "url": "https://example.com/input.mp4" }
+              ]
+            }
+          }
+        }
+      ],
+      "expected": { "tokens": 5400000 }
+    },
+    {
+      "name": "usage: a v3-omni edit reserves the longest input video",
+      "hook": "extractUsage",
+      "args": [
+        {
+          "model": "kling-video-v3-omni",
+          "requestBody": {
+            "endpoint": "omni-video",
+            "body": {
+              "contents": [
+                { "type": "prompt", "text": "Turn the feathers blue" },
+                { "type": "base_video", "url": "https://example.com/input.mp4" }
+              ],
+              "settings": { "audio": "original" }
+            }
+          }
+        }
+      ],
+      "expected": { "tokens": 1440000 }
+    },
+    {
+      "name": "usage: v4-flash omni video with only reference images",
+      "hook": "extractUsage",
+      "args": [
+        {
+          "model": "kling-video-v4-flash",
+          "requestBody": {
+            "endpoint": "omni-video",
+            "body": {
+              "contents": [
+                { "type": "prompt", "text": "Dress like @image_1" },
+                { "type": "refer_image", "url": "https://example.com/refer.jpg" }
+              ],
+              "settings": { "duration": 5 }
+            }
+          }
+        }
+      ],
+      "expected": { "tokens": 500000 }
+    },
+    {
+      "name": "usage: motion control reserves the longest reference video of the orientation",
+      "hook": "extractUsage",
+      "args": [
+        {
+          "model": "kling-video-motion-control-v3.0",
+          "requestBody": {
+            "endpoint": "motion-control",
+            "body": {
+              "contents": [
+                { "type": "image", "url": "https://example.com/character.png" },
+                { "type": "video", "url": "https://example.com/motion.mp4" }
+              ],
+              "settings": { "character_orientation": "image", "resolution": "1080p" }
+            }
+          }
+        }
+      ],
+      "expected": { "tokens": 1200000 }
+    },
+    {
+      "name": "decode a native text-to-video request",
+      "hook": "native",
+      "member": "textToVideo",
+      "args": [
+        {
+          "method": "POST",
+          "params": {},
+          "path": "/v1/wand/kling/text-to-video",
+          "query": {},
+          "body": { "kind": "json", "value": { "model": "kling-video-v4", "prompt": "A quiet garden", "settings": { "duration": 5 } } }
+        }
+      ],
+      "expected": {
+        "kind": "submit",
+        "model": "kling-video-v4",
+        "requestBody": { "model": "kling-video-v4", "endpoint": "text-to-video", "body": { "prompt": "A quiet garden", "settings": { "duration": 5 } } }
+      }
+    },
+    {
+      "name": "native request without a model",
+      "hook": "native",
+      "member": "omniVideo",
+      "args": [{ "method": "POST", "params": {}, "path": "/v1/wand/kling/omni-video", "query": {}, "body": { "kind": "json", "value": { "contents": [] } } }],
+      "expectedError": "model is required"
+    },
+    {
+      "name": "native request with a multipart body",
+      "hook": "native",
+      "member": "imageToVideo",
+      "args": [{ "method": "POST", "params": {}, "path": "/v1/wand/kling/image-to-video", "query": {}, "body": { "kind": "multipart", "fields": {}, "files": [] } }],
+      "expectedError": "JSON body required"
+    },
+    {
+      "name": "submit reply keeps the TokenHub task id",
+      "hook": "parseSubmitResponse",
+      "args": [
+        {},
+        {
+          "statusCode": 200,
+          "headers": {},
+          "body": {
+            "code": 0,
+            "message": "SUCCEED",
+            "request_id": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
+            "data": { "id": "task_xxxxxxxxxxxx", "status": "submitted", "message": "", "create_time": 1714000000000, "update_time": 1714000000000 }
+          }
+        }
+      ],
+      "expected": {
+        "taskId": "task_xxxxxxxxxxxx",
+        "taskData": {
+          "code": 0,
+          "message": "SUCCEED",
+          "request_id": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
+          "data": { "id": "task_xxxxxxxxxxxx", "status": "submitted", "message": "", "create_time": 1714000000000, "update_time": 1714000000000 }
+        }
+      }
+    },
+    {
+      "name": "submit reply with a business error",
+      "hook": "parseSubmitResponse",
+      "args": [{}, { "statusCode": 200, "headers": {}, "body": { "code": 1201, "message": "Invalid parameters", "request_id": "r1" } }],
+      "expectedError": "Invalid parameters"
+    },
+    {
+      "name": "submit reply without a task id",
+      "hook": "parseSubmitResponse",
+      "args": [{}, { "statusCode": 200, "headers": {}, "body": { "code": 0, "message": "SUCCEED", "request_id": "r1", "data": { "status": "submitted" } } }],
+      "expectedError": "TokenHub returned no task id"
+    },
+    {
+      "name": "query the task on TokenHub",
+      "hook": "buildQueryRequest",
+      "args": [{ "taskId": "task_xxxxxxxxxxxx", "baseUrl": "https://tokenhub.tencentmaas.com", "apiKey": "th-test-key", "upstream": { "kind": "vendor" } }],
+      "expected": {
+        "url": "https://tokenhub.tencentmaas.com/v1/wand/kling/tasks/task_xxxxxxxxxxxx",
+        "method": "GET",
+        "headers": { "Accept": "application/json", "Authorization": "Bearer th-test-key" }
+      }
+    },
+    {
+      "name": "query the task on a New API upstream",
+      "hook": "buildQueryRequest",
+      "args": [{ "taskId": "task_public_1", "baseUrl": "https://gateway.example.com", "apiKey": "sk-gateway", "upstream": { "kind": "new_api" } }],
+      "expected": {
+        "url": "https://gateway.example.com/t0ng7u_tokenhub-kling/v1/wand/kling/tasks/task_public_1",
+        "method": "GET",
+        "headers": { "Accept": "application/json", "Authorization": "Bearer sk-gateway" }
+      }
+    },
+    {
+      "name": "submitted task",
+      "hook": "parseTaskResult",
+      "args": [
+        { "taskId": "task_x" },
+        { "code": 0, "message": "SUCCEED", "request_id": "r1", "data": [{ "id": "task_x", "status": "submitted", "message": "", "create_time": 1786428992000, "update_time": 1786428992000 }] },
+        { "status": 200, "headers": {} }
+      ],
+      "expected": { "taskId": "task_x", "status": "SUBMITTED", "reason": "" }
+    },
+    {
+      "name": "processing task",
+      "hook": "parseTaskResult",
+      "args": [
+        { "taskId": "task_x" },
+        { "code": 0, "message": "SUCCEED", "request_id": "r1", "data": [{ "id": "task_x", "status": "processing", "message": "", "create_time": 1786428992000, "update_time": 1786429000000 }] },
+        { "status": 200, "headers": {} }
+      ],
+      "expected": { "taskId": "task_x", "status": "IN_PROGRESS", "reason": "" }
+    },
+    {
+      "name": "succeeded task reports the video and the tokens",
+      "hook": "parseTaskResult",
+      "args": [
+        { "taskId": "251435731-WandVideo-7d1997fb7ad74bfabd2814b4a9962571" },
+        {
+          "code": 0,
+          "data": [
+            {
+              "update_time": 1786429168170,
+              "create_time": 1786428992000,
+              "id": "251435731-WandVideo-7d1997fb7ad74bfabd2814b4a9962571",
+              "message": "",
+              "outputs": [{ "duration": "10.041", "id": "916037982829322296", "type": "video", "url": "https://example.com/output-video.mp4?q-signature=xxxxxx" }],
+              "status": "succeeded"
+            }
+          ],
+          "message": "SUCCEED",
+          "request_id": "5d0b35d5-da56-4dae-8e6c-81035122e716-query-1786429167",
+          "tokenhub_usage": { "total_tokens": 600000 }
+        },
+        { "status": 200, "headers": {} }
+      ],
+      "expected": {
+        "taskId": "251435731-WandVideo-7d1997fb7ad74bfabd2814b4a9962571",
+        "status": "SUCCESS",
+        "reason": "",
+        "progress": "100%",
+        "url": "https://example.com/output-video.mp4?q-signature=xxxxxx",
+        "totalTokens": 600000
+      }
+    },
+    {
+      "name": "failed task carries the reason",
+      "hook": "parseTaskResult",
+      "args": [
+        { "taskId": "task_x" },
+        { "code": 0, "message": "SUCCEED", "request_id": "r1", "data": [{ "id": "task_x", "status": "failed", "message": "Trigger the platform strategy", "create_time": 1786428992000, "update_time": 1786429000000 }] },
+        { "status": 200, "headers": {} }
+      ],
+      "expected": { "taskId": "task_x", "status": "FAILURE", "reason": "Trigger the platform strategy", "progress": "100%" }
+    },
+    {
+      "name": "unknown status is not in progress",
+      "hook": "parseTaskResult",
+      "args": [
+        { "taskId": "task_x" },
+        { "code": 0, "message": "SUCCEED", "request_id": "r1", "data": [{ "id": "task_x", "status": "paused" }] },
+        { "status": 200, "headers": {} }
+      ],
+      "expected": { "status": "UNKNOWN", "reason": "unknown task status: paused" }
+    },
+    {
+      "name": "an error reply is unknown with its message",
+      "hook": "parseTaskResult",
+      "args": [
+        { "taskId": "task_x" },
+        { "code": 1200, "message": "Invalid request parameters", "request_id": "r1" },
+        { "status": 400, "headers": {} }
+      ],
+      "expected": { "status": "UNKNOWN", "reason": "Invalid request parameters" }
+    },
+    {
+      "name": "completion usage is the reported tokens",
+      "hook": "extractUsageOnComplete",
+      "args": [{}, { "status": "SUCCESS" }, { "code": 0, "data": [], "tokenhub_usage": { "total_tokens": 600000 } }],
+      "expected": { "tokens": 600000 }
+    },
+    {
+      "name": "a zero token report keeps the reservation",
+      "hook": "extractUsageOnComplete",
+      "args": [{}, { "status": "SUCCESS" }, { "code": 0, "data": [], "tokenhub_usage": { "total_tokens": 0 } }],
+      "expected": null
+    },
+    {
+      "name": "a missing token report keeps the reservation",
+      "hook": "extractUsageOnComplete",
+      "args": [{}, { "status": "SUCCESS" }, { "code": 0, "data": [] }],
+      "expected": null
+    },
+    {
+      "name": "a failed task reports no usage",
+      "hook": "extractUsageOnComplete",
+      "args": [{}, { "status": "FAILURE" }, { "code": 0, "data": [], "tokenhub_usage": { "total_tokens": 600000 } }],
+      "expected": null
+    },
+    {
+      "name": "a succeeded task lists its video",
+      "hook": "listArtifacts",
+      "args": [
+        {
+          "taskId": "task_public_1",
+          "status": "SUCCESS",
+          "data": { "code": 0, "data": [{ "id": "task_public_1", "status": "succeeded", "outputs": [{ "type": "video", "url": "https://example.com/output-video.mp4" }] }] }
+        }
+      ],
+      "expected": [{ "key": "video", "type": "video" }]
+    },
+    {
+      "name": "a task without a video lists nothing",
+      "hook": "listArtifacts",
+      "args": [{ "taskId": "task_public_1", "status": "SUCCESS", "data": { "code": 0, "data": [{ "id": "task_public_1", "status": "succeeded", "outputs": [] }] } }],
+      "expected": []
+    },
+    {
+      "name": "the video downloads without channel credentials",
+      "hook": "buildContentRequest",
+      "args": [
+        {
+          "artifactKey": "video",
+          "upstreamTaskId": "task_x",
+          "clientRequest": { "method": "GET" },
+          "data": { "code": 0, "data": [{ "id": "task_x", "status": "succeeded", "outputs": [{ "type": "video", "url": "https://example.com/output-video.mp4" }] }] }
+        }
+      ],
+      "expected": { "url": "https://example.com/output-video.mp4", "method": "GET", "credentialless": true }
+    },
+    {
+      "name": "native submit reply shows the gateway task id",
+      "hook": "native",
+      "member": "taskCreated",
+      "args": [
+        {},
+        {
+          "task_id": "task_public_1",
+          "status": "SUBMITTED",
+          "data": { "code": 0, "message": "SUCCEED", "request_id": "r1", "data": { "id": "task_public_1", "status": "submitted", "message": "", "create_time": 1714000000000, "update_time": 1714000000000 } }
+        }
+      ],
+      "expected": { "code": 0, "message": "SUCCEED", "request_id": "r1", "data": { "id": "task_public_1", "status": "submitted", "message": "", "create_time": 1714000000000, "update_time": 1714000000000 } }
+    },
+    {
+      "name": "native query of a task the gateway failed reads failed",
+      "hook": "native",
+      "member": "taskStatus",
+      "args": [
+        {},
+        {
+          "task_id": "task_public_1",
+          "status": "FAILURE",
+          "fail_reason": "task timed out",
+          "created_at": 1714000000,
+          "updated_at": 1714000600,
+          "data": { "code": 0, "message": "SUCCEED", "request_id": "r1", "data": [{ "id": "task_public_1", "status": "processing", "message": "", "create_time": 1714000000000, "update_time": 1714000300000 }] }
+        }
+      ],
+      "expected": {
+        "code": 0,
+        "message": "SUCCEED",
+        "request_id": "r1",
+        "data": [{ "id": "task_public_1", "status": "failed", "message": "task timed out", "create_time": 1714000000000, "update_time": 1714000300000 }]
+      }
+    },
+    {
+      "name": "native error uses TokenHub business codes",
+      "hook": "native",
+      "member": "error",
+      "args": [{}, { "code": "task_not_found", "httpStatus": 404, "message": "Task not found", "retryable": false }],
+      "expected": { "code": 1203, "message": "Task not found", "request_id": "" }
+    },
+    {
+      "name": "openai video JSON request",
+      "hook": "protocols",
+      "path": ["openai_video", "decodeRequest"],
+      "args": [{ "model": "kling-video-v4", "body": { "kind": "json", "value": { "model": "kling-video-v4", "prompt": "Ocean waves", "seconds": 10, "size": "1920x1080" } } }],
+      "expected": {
+        "kind": "submit",
+        "model": "kling-video-v4",
+        "action": "text_to_video",
+        "requestBody": { "model": "kling-video-v4", "prompt": "Ocean waves", "images": [], "seconds": 10, "size": "1920x1080" }
+      }
+    },
+    {
+      "name": "openai video request becomes TokenHub text-to-video",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "model": "kling-video-v4",
+          "baseUrl": "https://tokenhub.tencentmaas.com",
+          "apiKey": "th-test-key",
+          "requestBody": { "model": "kling-video-v4", "prompt": "Ocean waves", "images": [], "seconds": 10, "size": "1920x1080" }
+        }
+      ],
+      "expected": {
+        "url": "https://tokenhub.tencentmaas.com/v1/wand/kling/text-to-video",
+        "method": "POST",
+        "headers": { "Accept": "application/json", "Authorization": "Bearer th-test-key", "Content-Type": "application/json" },
+        "body": { "model": "kling-video-v4", "prompt": "Ocean waves", "settings": { "resolution": "1080p", "aspect_ratio": "16:9", "duration": 10 } },
+        "action": "text_to_video"
+      }
+    },
+    {
+      "name": "openai video multipart upload becomes the first frame",
+      "hook": "protocols",
+      "path": ["openai_video", "decodeRequest"],
+      "args": [
+        {
+          "model": "kling-video-v3",
+          "body": {
+            "kind": "multipart",
+            "fields": { "prompt": ["Animate"], "seconds": ["5"] },
+            "files": [{ "ref": "request_file:input_reference", "field": "input_reference", "filename": "a.png", "mimeType": "image/png", "size": 10 }]
+          }
+        }
+      ],
+      "expected": {
+        "kind": "submit",
+        "model": "kling-video-v3",
+        "action": "image_to_video",
+        "requestBody": {
+          "model": "kling-video-v3",
+          "prompt": "Animate",
+          "images": [{ "__fileRef": "request_file:input_reference", "encoding": "dataUrl", "maxBytes": 52428800 }],
+          "upload": { "__fileRef": "request_file:input_reference", "encoding": "dataUrl", "maxBytes": 52428800 },
+          "seconds": 5
+        }
+      }
+    },
+    {
+      "name": "openai video upload is sent inline as the first frame",
+      "hook": "buildSubmitRequest",
+      "args": [
+        {
+          "model": "kling-video-v3",
+          "baseUrl": "https://tokenhub.tencentmaas.com",
+          "apiKey": "th-test-key",
+          "requestBody": {
+            "model": "kling-video-v3",
+            "prompt": "Animate",
+            "images": [{ "__fileRef": "request_file:input_reference", "encoding": "dataUrl", "maxBytes": 52428800 }],
+            "upload": { "__fileRef": "request_file:input_reference", "encoding": "dataUrl", "maxBytes": 52428800 },
+            "seconds": 5
+          }
+        }
+      ],
+      "expected": {
+        "url": "https://tokenhub.tencentmaas.com/v1/wand/kling/image-to-video",
+        "method": "POST",
+        "headers": { "Accept": "application/json", "Authorization": "Bearer th-test-key", "Content-Type": "application/json" },
+        "body": {
+          "model": "kling-video-v3",
+          "contents": [
+            { "type": "prompt", "text": "Animate" },
+            { "type": "first_frame", "url": { "__fileRef": "request_file:input_reference", "encoding": "dataUrl", "maxBytes": 52428800 } }
+          ],
+          "settings": { "duration": 5 }
+        },
+        "action": "image_to_video"
+      }
+    },
+    {
+      "name": "openai video seconds must be an integer",
+      "hook": "protocols",
+      "path": ["openai_video", "decodeRequest"],
+      "args": [{ "model": "kling-video-v3", "body": { "kind": "json", "value": { "prompt": "Ocean waves", "seconds": "five" } } }],
+      "expectedError": "seconds must be an integer"
+    },
+    {
+      "name": "openai video render of a succeeded task",
+      "hook": "protocols",
+      "path": ["openai_video", "render"],
+      "args": [
+        {},
+        {
+          "task_id": "task_public_1",
+          "status": "SUCCESS",
+          "data": { "code": 0, "data": [{ "id": "task_public_1", "status": "succeeded", "outputs": [{ "duration": "10.041", "type": "video", "url": "https://example.com/output-video.mp4" }] }] }
+        }
+      ],
+      "expected": { "id": "task_public_1", "object": "video", "model": "", "status": "completed", "seconds": "10.041" }
+    },
+    {
+      "name": "openai video render of a failed task",
+      "hook": "protocols",
+      "path": ["openai_video", "render"],
+      "args": [
+        {},
+        {
+          "task_id": "task_public_1",
+          "status": "FAILURE",
+          "fail_reason": "Trigger the platform strategy",
+          "data": { "code": 0, "data": [{ "id": "task_public_1", "status": "failed", "message": "Trigger the platform strategy" }] }
+        }
+      ],
+      "expected": {
+        "id": "task_public_1",
+        "object": "video",
+        "model": "",
+        "status": "failed",
+        "error": { "code": "task_failed", "message": "Trigger the platform strategy" }
+      }
+    },
+    {
+      "name": "responses request with metadata settings",
+      "hook": "protocols",
+      "path": ["openai_responses", "decodeRequest"],
+      "args": [
+        {
+          "model": "kling-video-v3",
+          "body": { "kind": "json", "value": { "model": "kling-video-v3", "input": "A cat on a windowsill", "seconds": 5, "metadata": { "resolution": "1080p" } } }
+        }
+      ],
+      "expected": {
+        "kind": "submit",
+        "model": "kling-video-v3",
+        "action": "text_to_video",
+        "requestBody": { "model": "kling-video-v3", "prompt": "A cat on a windowsill", "images": [], "seconds": 5, "settings": { "resolution": "1080p" } }
+      }
+    }
+  ]
+}
